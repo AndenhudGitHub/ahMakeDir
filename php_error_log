@@ -1,0 +1,6 @@
+[08-Jan-2021 04:39:10 UTC] PHP Warning:  Cannot open 'extras\browscap.ini' for reading in Unknown on line 0
+[08-Jan-2021 04:39:10 UTC] PHP Fatal error:  Unable to start standard module in Unknown on line 0
+[08-Jan-2021 04:39:22 UTC] PHP Warning:  Cannot open 'extras\browscap.ini' for reading in Unknown on line 0
+[08-Jan-2021 04:39:22 UTC] PHP Fatal error:  Unable to start standard module in Unknown on line 0
+[08-Jan-2021 04:40:35 UTC] PHP Warning:  Cannot open '.\extras\browscap.ini' for reading in Unknown on line 0
+[08-Jan-2021 04:40:35 UTC] PHP Fatal error:  Unable to start standard module in Unknown on line 0
