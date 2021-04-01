@@ -78,11 +78,19 @@ func main() {
 	rows, err := xlsx.GetRows(defaultSheetName)
 	begin := 0
 	end := 3
-	step := 4
 	var smaillSizeArr []string
 	var smaillPathArr []string
 	var failSizeTable []string
-	for _, row := range rows {
+	for index, row := range rows {
+		step, errturn := strconv.Atoi(row[8])
+		if errturn != nil {
+			fmt.Println("轉換失敗!!")
+		}
+		if index == 0 {
+			end = step - 1
+		} else {
+			end = end + step
+		}
 
 		leve1MakeDir := DirPath + string(os.PathSeparator) + row[0] + "_" + row[1]
 		row[6] = strings.Replace(row[6], "/", "", -1)
@@ -148,7 +156,6 @@ func main() {
 			count++
 		}
 		begin = begin + step
-		end = end + step
 	}
 	var txtString string = ""
 	//resize 圖片
