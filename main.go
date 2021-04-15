@@ -14,11 +14,14 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/Luxurioust/excelize"
 )
+
+type ByNumericalFilename []os.FileInfo
 
 func main() {
 	//尺寸表路徑
@@ -57,7 +60,7 @@ func main() {
 	}
 	//讀圖片 塞入陣列
 	imagePath := DirPath + string(os.PathSeparator) + imageDirArr[0]
-	imageFileList := scandir(imagePath)
+	imageFileList := scandir_sort(imagePath)
 	for _, file := range imageFileList {
 		if strings.Index(file, ".jpg") > -1 || strings.Index(file, ".png") > -1 {
 			imagePicArr = append(imagePicArr, file)
@@ -182,6 +185,46 @@ func main() {
 	}
 	fmt.Println("執行完成")
 	fmt.Scanln()
+}
+
+func (nf ByNumericalFilename) Len() int      { return len(nf) }
+func (nf ByNumericalFilename) Swap(i, j int) { nf[i], nf[j] = nf[j], nf[i] }
+func (nf ByNumericalFilename) Less(i, j int) bool {
+
+	// Use path names
+	pathA := nf[i].Name()
+	pathB := nf[j].Name()
+
+	if (strings.Index(pathA, ".jpg") > -1 || strings.Index(pathA, ".png") > -1) && strings.Index(pathB, ".jpg") > -1 || strings.Index(pathB, ".png") > -1 {
+		// Grab integer value of each filename by parsing the string and slicing off
+		// the extension
+		a, err1 := strconv.ParseInt(pathA[strings.LastIndex(pathA, "(")+1:strings.LastIndex(pathA, ")")], 10, 64)
+		b, err2 := strconv.ParseInt(pathB[strings.LastIndex(pathB, "(")+1:strings.LastIndex(pathB, ")")], 10, 64)
+
+		// If any were not numbers sort lexographically
+		if err1 != nil || err2 != nil {
+			return pathA < pathB
+		}
+
+		// Which integer is smaller?
+		return a < b
+	} else {
+		return false
+	}
+}
+
+//掃描資料夾底下檔案
+func scandir_sort(dir string) []string {
+	var files []string
+	filelist, err := ioutil.ReadDir(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sort.Sort(ByNumericalFilename(filelist))
+	for _, f := range filelist {
+		files = append(files, f.Name())
+	}
+	return files
 }
 
 //掃描資料夾底下檔案
