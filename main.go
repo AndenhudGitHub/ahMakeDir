@@ -61,6 +61,7 @@ func main() {
 	//讀圖片 塞入陣列
 	imagePath := DirPath + string(os.PathSeparator) + imageDirArr[0]
 	imageFileList := scandir_sort(imagePath)
+
 	for _, file := range imageFileList {
 		if strings.Index(file, ".jpg") > -1 || strings.Index(file, ".png") > -1 {
 			imagePicArr = append(imagePicArr, file)
@@ -84,6 +85,25 @@ func main() {
 	var smaillSizeArr []string
 	var smaillPathArr []string
 	var failSizeTable []string
+
+	var totalExcelCount int = 0
+
+	for _, row := range rows {
+		i, err := strconv.Atoi(row[8])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+		totalExcelCount += i
+	}
+
+	imageFileListCount := len(imagePicArr)
+	if totalExcelCount != imageFileListCount {
+		fmt.Println("EXCEL 檔案I欄位總數:" + strconv.Itoa(totalExcelCount) + "，資料夾內圖片總數:" + strconv.Itoa(imageFileListCount) + "，親愛的請檢查您的圖片總數。")
+		fmt.Scanln()
+		os.Exit(2)
+	}
+
 	for index, row := range rows {
 		step, errturn := strconv.Atoi(row[8])
 		if errturn != nil {
