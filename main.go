@@ -104,6 +104,9 @@ func main() {
 		os.Exit(2)
 	}
 
+	// fmt.Println(imagePicArr)
+	// os.Exit(2)
+
 	for index, row := range rows {
 		step, errturn := strconv.Atoi(row[8])
 		if errturn != nil {
