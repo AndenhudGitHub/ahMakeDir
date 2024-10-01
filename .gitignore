@@ -47,3 +47,4 @@
 *.phpt
 *.php5
 php/
+.vscode
