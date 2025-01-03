@@ -1,10 +1,11 @@
 <?php
 require 'JPEG_ICC.php';
 
-$config    = file_get_contents("config.json");
+
+$config    = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR  ."config.json");
 $configArr = json_decode($config, true);
 
-$smallPath    = file_get_contents("smallPath.txt");
+$smallPath    = file_get_contents(__DIR__ .DIRECTORY_SEPARATOR. "smallPath.txt");
 $smallPath    = str_replace("\n", "", $smallPath);
 $smallPathArr = array_unique(explode(';', $smallPath));
 if (count($smallPathArr) > 0) {

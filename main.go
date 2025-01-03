@@ -18,16 +18,32 @@ import (
 type ByNumericalFilename []os.DirEntry
 
 func main() {
+
+	// 獲取執行文件的目錄
+	execPath, err := os.Executable()
+	if err != nil {
+		fmt.Printf("Error getting executable path: %v\n", err)
+		os.Exit(3)
+	}
+	execDir := filepath.Dir(execPath)
+
+	configPath := filepath.Join(execDir, "config.json")
+
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// 如果執行文件目錄找不到 config.json，嘗試從當前工作目錄加載
+		configPath = "config.json"
+	}
+
 	//尺寸表路徑
-	data, err := os.ReadFile("config.json")
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		fmt.Print(err)
 		os.Exit(3)
 	}
 	type config struct {
-		WorkPath      string `json:"WorkPath"`
+		WorkPath       string `json:"WorkPath"`
 		PictureDirName string `json:"PictureDirName"`
-		SizeTablePath string `json:"SizeTablePath"`
+		SizeTablePath  string `json:"SizeTablePath"`
 	}
 	var obj config
 	err = json.Unmarshal(data, &obj)
@@ -43,7 +59,7 @@ func main() {
 	if runtime.GOOS == "windows" {
 		DirPath = strings.Replace(obj.WorkPath, "\\", "\\\\", -1)
 		SpecPath = strings.Replace(obj.SizeTablePath, "\\", "\\\\", -1)
-	} 
+	}
 
 	//掃描DIR
 	dirArr := scandir(DirPath)
@@ -61,7 +77,7 @@ func main() {
 			imageDirArr = append(imageDirArr, file)
 		}
 	}
-	
+
 	imgDirName := obj.PictureDirName
 
 	//讀圖片 塞入陣列
@@ -193,18 +209,29 @@ func main() {
 			txtString = txtString + errorMsg
 		}
 		content := []byte(txtString)
-		err := os.WriteFile("log.txt", content, 0666)
+		logPath := filepath.Join(execDir, "log.txt")
+		if _, err := os.Stat(logPath); os.IsNotExist(err) {
+			logPath = "log.txt"
+		}
+		err := os.WriteFile(logPath, content, 0666)
 		if err != nil {
 			fmt.Println("ioutil WriteFile error: ", err)
 		}
 	}
+
+	// fmt.Println(smaillPathArr)
+
 	if len(smaillPathArr) > 0 {
 		txtString = ""
 		for _, smallPath := range smaillPathArr {
 			txtString = txtString + smallPath + "\n"
 		}
 		content := []byte(txtString)
-		err := os.WriteFile("smallPath.txt", content, 0666)
+		txtPath := filepath.Join(execDir, "smallPath.txt")
+		if runtime.GOOS == "windows" {
+			txtPath = "smallPath.txt"
+		}
+		err := os.WriteFile(txtPath, content, 0666)
 		if err != nil {
 			fmt.Println("ioutil WriteFile error: ", err)
 		}
@@ -267,7 +294,7 @@ func scandir_sort(dir string) []string {
 	return files
 }
 
-//掃描資料夾底下檔案
+// 掃描資料夾底下檔案
 func scandir(dir string) []string {
 	var files []string
 	filelist, err := os.ReadDir(dir)
@@ -280,7 +307,7 @@ func scandir(dir string) []string {
 	return files
 }
 
-//byte 轉 string
+// byte 轉 string
 func BytesToString(data []byte) string {
 	return string(data[:])
 }
