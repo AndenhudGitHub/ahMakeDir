@@ -46,3 +46,6 @@
 *.php5
 php/
 .vscode
+*.jpg
+*.xlsx
+AhMakeDir_mac

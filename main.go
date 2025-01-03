@@ -1,37 +1,32 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/color"
-	"image/draw"
-	"image/jpeg"
 	"io"
-	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/Luxurioust/excelize"
+	"github.com/xuri/excelize/v2"
 )
 
-type ByNumericalFilename []os.FileInfo
+type ByNumericalFilename []os.DirEntry
 
 func main() {
 	//尺寸表路徑
-	data, err := ioutil.ReadFile("config.json")
+	data, err := os.ReadFile("config.json")
 	if err != nil {
 		fmt.Print(err)
 		os.Exit(3)
 	}
 	type config struct {
 		WorkPath      string `json:"WorkPath"`
+		PictureDirName string `json:"PictureDirName"`
 		SizeTablePath string `json:"SizeTablePath"`
 	}
 	var obj config
@@ -40,8 +35,16 @@ func main() {
 		fmt.Println("error:", err)
 		os.Exit(3)
 	}
-	DirPath := strings.Replace(obj.WorkPath, "\\", "\\\\", -1)
-	SpecPath := strings.Replace(obj.SizeTablePath, "\\", "\\\\", -1)
+
+	// 非 Windows: 直接使用 TrimSpace
+	DirPath := strings.TrimSpace(obj.WorkPath)
+	SpecPath := strings.TrimSpace(obj.SizeTablePath)
+
+	if runtime.GOOS == "windows" {
+		DirPath = strings.Replace(obj.WorkPath, "\\", "\\\\", -1)
+		SpecPath = strings.Replace(obj.SizeTablePath, "\\", "\\\\", -1)
+	} 
+
 	//掃描DIR
 	dirArr := scandir(DirPath)
 	//excel資料夾檔名
@@ -58,8 +61,11 @@ func main() {
 			imageDirArr = append(imageDirArr, file)
 		}
 	}
+	
+	imgDirName := obj.PictureDirName
+
 	//讀圖片 塞入陣列
-	imagePath := DirPath + string(os.PathSeparator) + imageDirArr[0]
+	imagePath := DirPath + string(os.PathSeparator) + imgDirName
 	imageFileList := scandir_sort(imagePath)
 
 	for _, file := range imageFileList {
@@ -103,9 +109,6 @@ func main() {
 		fmt.Scanln()
 		os.Exit(2)
 	}
-
-	// fmt.Println(imagePicArr)
-	// os.Exit(2)
 
 	for index, row := range rows {
 		step, errturn := strconv.Atoi(row[8])
@@ -190,7 +193,7 @@ func main() {
 			txtString = txtString + errorMsg
 		}
 		content := []byte(txtString)
-		err := ioutil.WriteFile("log.txt", content, 0666)
+		err := os.WriteFile("log.txt", content, 0666)
 		if err != nil {
 			fmt.Println("ioutil WriteFile error: ", err)
 		}
@@ -201,7 +204,7 @@ func main() {
 			txtString = txtString + smallPath + "\n"
 		}
 		content := []byte(txtString)
-		err := ioutil.WriteFile("smallPath.txt", content, 0666)
+		err := os.WriteFile("smallPath.txt", content, 0666)
 		if err != nil {
 			fmt.Println("ioutil WriteFile error: ", err)
 		}
@@ -214,36 +217,50 @@ func (nf ByNumericalFilename) Len() int      { return len(nf) }
 func (nf ByNumericalFilename) Swap(i, j int) { nf[i], nf[j] = nf[j], nf[i] }
 func (nf ByNumericalFilename) Less(i, j int) bool {
 
-	// Use path names
 	pathA := nf[i].Name()
 	pathB := nf[j].Name()
 
-	if (strings.Index(pathA, ".jpg") > -1 || strings.Index(pathA, ".png") > -1) && strings.Index(pathB, ".jpg") > -1 || strings.Index(pathB, ".png") > -1 {
-		// Grab integer value of each filename by parsing the string and slicing off
-		// the extension
-		a, err1 := strconv.ParseInt(pathA[strings.LastIndex(pathA, "(")+1:strings.LastIndex(pathA, ")")], 10, 64)
-		b, err2 := strconv.ParseInt(pathB[strings.LastIndex(pathB, "(")+1:strings.LastIndex(pathB, ")")], 10, 64)
+	isImgA := strings.HasSuffix(pathA, ".jpg") || strings.HasSuffix(pathA, ".png")
+	isImgB := strings.HasSuffix(pathB, ".jpg") || strings.HasSuffix(pathB, ".png")
 
-		// If any were not numbers sort lexographically
+	if isImgA && isImgB {
+
+		aStart := strings.LastIndex(pathA, "(")
+		aEnd := strings.LastIndex(pathA, ")")
+		bStart := strings.LastIndex(pathB, "(")
+		bEnd := strings.LastIndex(pathB, ")")
+
+		if aStart == -1 || aEnd == -1 || bStart == -1 || bEnd == -1 {
+			return pathA < pathB
+		}
+
+		a, err1 := strconv.ParseInt(pathA[aStart+1:aEnd], 10, 64)
+		b, err2 := strconv.ParseInt(pathB[bStart+1:bEnd], 10, 64)
+
 		if err1 != nil || err2 != nil {
 			return pathA < pathB
 		}
 
-		// Which integer is smaller?
 		return a < b
-	} else {
-		return false
 	}
+
+	return pathA < pathB
 }
 
-//掃描資料夾底下檔案
+// 扫描文件夹并排序
 func scandir_sort(dir string) []string {
 	var files []string
-	filelist, err := ioutil.ReadDir(dir)
+
+	// 读取目录内容
+	filelist, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// 排序文件列表
 	sort.Sort(ByNumericalFilename(filelist))
+
+	// 提取文件名
 	for _, f := range filelist {
 		files = append(files, f.Name())
 	}
@@ -253,7 +270,7 @@ func scandir_sort(dir string) []string {
 //掃描資料夾底下檔案
 func scandir(dir string) []string {
 	var files []string
-	filelist, err := ioutil.ReadDir(dir)
+	filelist, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -339,99 +356,4 @@ func copyFileContents(src, dst string) (err error) {
 	}
 	err = out.Sync()
 	return
-}
-
-func resizeSelf(img image.Image, length int, width int) image.Image {
-	//truncate pixel size
-	minX := img.Bounds().Min.X
-	minY := img.Bounds().Min.Y
-	maxX := img.Bounds().Max.X
-	maxY := img.Bounds().Max.Y
-	for (maxX-minX)%length != 0 {
-		maxX--
-	}
-	for (maxY-minY)%width != 0 {
-		maxY--
-	}
-	scaleX := (maxX - minX) / length
-	scaleY := (maxY - minY) / width
-
-	imgRect := image.Rect(0, 0, length, width)
-	resImg := image.NewRGBA(imgRect)
-	draw.Draw(resImg, resImg.Bounds(), &image.Uniform{C: color.White}, image.ZP, draw.Src)
-	for y := 0; y < width; y += 1 {
-		for x := 0; x < length; x += 1 {
-			averageColor := getAverageColor(img, minX+x*scaleX, minX+(x+1)*scaleX, minY+y*scaleY, minY+(y+1)*scaleY)
-			resImg.Set(x, y, averageColor)
-		}
-	}
-	return resImg
-}
-
-func getAverageColor(img image.Image, minX int, maxX int, minY int, maxY int) color.Color {
-	var averageRed float64
-	var averageGreen float64
-	var averageBlue float64
-	var averageAlpha float64
-	scale := 1.0 / float64((maxX-minX)*(maxY-minY))
-
-	for i := minX; i < maxX; i++ {
-		for k := minY; k < maxY; k++ {
-			r, g, b, a := img.At(i, k).RGBA()
-			averageRed += float64(r) * scale
-			averageGreen += float64(g) * scale
-			averageBlue += float64(b) * scale
-			averageAlpha += float64(a) * scale
-		}
-	}
-
-	averageRed = math.Sqrt(averageRed)
-	averageGreen = math.Sqrt(averageGreen)
-	averageBlue = math.Sqrt(averageBlue)
-	averageAlpha = math.Sqrt(averageAlpha)
-
-	averageColor := color.RGBA{
-		R: uint8(averageRed),
-		G: uint8(averageGreen),
-		B: uint8(averageBlue),
-		A: uint8(averageAlpha)}
-
-	return averageColor
-}
-
-func imgToBytes(img image.Image) []byte {
-	var opt jpeg.Options
-	opt.Quality = 80
-
-	buff := bytes.NewBuffer(nil)
-	err := jpeg.Encode(buff, img, &opt)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return buff.Bytes()
-}
-func loadImage(filename string) image.Image {
-	f, err := os.Open(filename)
-	if err != nil {
-		log.Fatalf("os.Open failed: %v", err)
-	}
-	defer f.Close()
-	img, _, err := image.Decode(f)
-	if err != nil {
-		log.Fatalf("image.Decode failed: %v", err)
-	}
-	return img
-}
-
-func saveImage(filename string, img image.Image) {
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Fatalf("os.Create failed: %v", err)
-	}
-	defer f.Close()
-	err = jpeg.Encode(f, img, nil)
-	if err != nil {
-		log.Fatalf("png.Encode failed: %v", err)
-	}
 }
