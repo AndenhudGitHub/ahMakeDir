@@ -90,6 +90,7 @@ func main() {
 		}
 	}
 
+	
 	//讀excel 跑陣列
 	excelPath := DirPath + string(os.PathSeparator) + excelArr[0]
 	xlsx, err := excelize.OpenFile(excelPath)
@@ -119,12 +120,13 @@ func main() {
 		totalExcelCount += i
 	}
 
-	imageFileListCount := len(imagePicArr)
-	if totalExcelCount != imageFileListCount {
-		fmt.Println("EXCEL 檔案I欄位總數:" + strconv.Itoa(totalExcelCount) + "，資料夾內圖片總數:" + strconv.Itoa(imageFileListCount) + "，親愛的請檢查您的圖片總數。")
-		fmt.Scanln()
-		os.Exit(2)
-	}
+
+	// imageFileListCount := len(imagePicArr)
+	// if totalExcelCount != imageFileListCount {
+	// 	fmt.Println("EXCEL 檔案I欄位總數:" + strconv.Itoa(totalExcelCount) + "，資料夾內圖片總數:" + strconv.Itoa(imageFileListCount) + "，親愛的請檢查您的圖片總數。")
+	// 	fmt.Scanln()
+	// 	os.Exit(2)
+	// }
 
 	for index, row := range rows {
 		step, errturn := strconv.Atoi(row[8])
@@ -328,35 +330,31 @@ func moveFile(orgPath string, movePath string) {
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherise, attempt to create a hard link
 // between the two files. If that fail, copy the file contents from src to dst.
-func CopyFile(src, dst string) (err error) {
+func CopyFile(src, dst string) error {
 	sfi, err := os.Stat(src)
 	if err != nil {
-		return
+		return err
 	}
 	if !sfi.Mode().IsRegular() {
-		// cannot copy non-regular files (e.g., directories,
-		// symlinks, devices, etc.)
 		return fmt.Errorf("CopyFile: non-regular source file %s (%q)", sfi.Name(), sfi.Mode().String())
 	}
+
 	dfi, err := os.Stat(dst)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return
-		}
-	} else {
-		if !(dfi.Mode().IsRegular()) {
+	if err == nil {
+		if !dfi.Mode().IsRegular() {
 			return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
 		}
 		if os.SameFile(sfi, dfi) {
-			return
+			return nil
 		}
+	} else if !os.IsNotExist(err) {
+		return err
 	}
-	if err = os.Link(src, dst); err == nil {
-		return
-	}
-	err = copyFileContents(src, dst)
-	return
+
+	// 直接複製內容，避免使用 os.Link
+	return copyFileContents(src, dst)
 }
+
 
 // copyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
