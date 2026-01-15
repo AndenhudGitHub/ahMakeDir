@@ -7,7 +7,6 @@
 *.ini-development
 *.ini-production
 *.lib
-*.md
 *.dtd
 *.spec
 *.xml
