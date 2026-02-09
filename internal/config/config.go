@@ -11,9 +11,15 @@ type Config struct {
 	WorkPath       string `json:"WorkPath"`
 	PictureDirName string `json:"PictureDirName"`
 	SizeTablePath  string `json:"SizeTablePath"`
+	ColorPicPath   string `json:"ColorPicPath"`
 	Width          string `json:"width"`  // Keeping as string to match original JSON, but logic might need int
 	Height         string `json:"height"` // Keeping as string to match original JSON
 	Quality        int    `json:"quality"`
+	ApiUrl         string `json:"ApiUrl"`
+	FtpHost        string `json:"FtpHost"`
+	FtpPort        string `json:"FtpPort"`
+	FtpUser        string `json:"FtpUser"`
+	FtpPassword    string `json:"FtpPassword"`
 }
 
 // DefaultConfig returns a default configuration
@@ -22,9 +28,15 @@ func DefaultConfig() Config {
 		WorkPath:       "",
 		PictureDirName: "org",
 		SizeTablePath:  "",
+		ColorPicPath:   "",
 		Width:          "500",
 		Height:         "700",
 		Quality:        90,
+		ApiUrl:         "http://localhost/api",
+		FtpHost:        "localhost",
+		FtpPort:        "21",
+		FtpUser:        "user",
+		FtpPassword:    "pass",
 	}
 }
 

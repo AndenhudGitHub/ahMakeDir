@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -85,6 +86,7 @@ func RunSplit(cfg config.Config, progress func(string)) ([]string, error) {
 	end := 0
 	var smallDirs []string
 	var failSizeTable []string
+	manifest := make(map[string]ImageMetadata)
 
 	for index, row := range rows {
 		if len(row) < 9 {
@@ -133,22 +135,107 @@ func RunSplit(cfg config.Config, progress func(string)) ([]string, error) {
 			failSizeTable = append(failSizeTable, fmt.Sprintf("Failed to copy size table: %s", styleNoPath))
 		}
 
+
 		// Copy Images
 		count := 1
 		for i := begin; i <= end && i < len(imagePicArr); i++ {
-			srcImg := filepath.Join(imagePath, imagePicArr[i])
+			originalName := imagePicArr[i]
+			srcImg := filepath.Join(imagePath, originalName)
+			
+			// New filename base
+			newFilename := fmt.Sprintf("%s_0%d.jpg", row[3], count)
 
 			// BIG
-			destBig := filepath.Join(level3, fmt.Sprintf("%s_0%d.jpg", row[3], count))
+			destBig := filepath.Join(level3, newFilename)
 			copyFile(srcImg, destBig)
 
 			// SMALL
-			destSmall := filepath.Join(level4, fmt.Sprintf("%s_0%d.jpg", row[3], count))
+			destSmall := filepath.Join(level4, newFilename)
 			copyFile(srcImg, destSmall)
 
 			// OUT
-			destOut := filepath.Join(level15, fmt.Sprintf("%s_0%d.jpg", row[3], count))
+			destOut := filepath.Join(level15, newFilename)
 			copyFile(srcImg, destOut)
+
+			// Calculate IsDef
+			// Col J (index 9) -> IsDef = 1
+			// Col K (index 10) -> IsDef = 2
+			isDef := 0
+			
+			// Helper to get value from column
+			getColVal := func(colIndex int) int {
+				if len(row) > colIndex {
+					if val, err := strconv.Atoi(row[colIndex]); err == nil {
+						return val
+					}
+				}
+				return -1 // Not found or invalid
+			}
+
+			valJ := getColVal(9)
+			valK := getColVal(10)
+
+			if count == valJ {
+				isDef = 1
+			} else if count == valK {
+				isDef = 2
+			}
+
+			// Handle Color Pic (Col L / Index 11)
+			colorPicName := ""
+			if len(row) > 11 {
+				colorPicInput := strings.TrimSpace(row[11])
+				if colorPicInput != "" {
+						
+						// Determine extension and source path
+						ext := filepath.Ext(colorPicInput)
+						srcColorPic := ""
+						
+						if ext != "" {
+							// User provided extension
+							srcColorPic = filepath.Join(cfg.ColorPicPath, colorPicInput)
+							if _, err := os.Stat(srcColorPic); os.IsNotExist(err) {
+								progress(fmt.Sprintf("Warning: Color pic not found: %s", srcColorPic))
+								srcColorPic = ""
+							}
+						} else {
+							// No extension provided, try .jpg then .png
+							tryJpg := filepath.Join(cfg.ColorPicPath, colorPicInput+".jpg")
+							tryPng := filepath.Join(cfg.ColorPicPath, colorPicInput+".png")
+							
+							if _, err := os.Stat(tryJpg); err == nil {
+								srcColorPic = tryJpg
+								ext = ".jpg"
+							} else if _, err := os.Stat(tryPng); err == nil {
+								srcColorPic = tryPng
+								ext = ".png"
+							} else {
+								progress(fmt.Sprintf("Warning: Color pic not found (tried .jpg/.png): %s", colorPicInput))
+							}
+						}
+
+						if srcColorPic != "" {
+							// Copy to SMALL
+							// Target name: row[3] (ItemCode) + "_Color" + ext
+							destColorPicName := fmt.Sprintf("%s_Color%s", row[3], ext)
+							destColorPicPath := filepath.Join(level4, destColorPicName)
+							
+							if err := copyFile(srcColorPic, destColorPicPath); err != nil {
+								progress(fmt.Sprintf("Warning: Failed to copy color pic: %v", err))
+							} else {
+								colorPicName = destColorPicName
+							}
+						}
+				}
+			}
+
+			// Record to manifest
+			manifest[newFilename] = ImageMetadata{
+				ExcelColD:        row[3],
+				Sort:             count,
+				IsDef:            isDef,
+				ColorPicFilename: colorPicName,
+			}
 
 			count++
 		}
@@ -162,8 +249,28 @@ func RunSplit(cfg config.Config, progress func(string)) ([]string, error) {
 		return smallDirs, fmt.Errorf("completed with errors: %v", failSizeTable)
 	}
 
+	// Save Manifest (Standard)
+	manifestPath := filepath.Join(dirPath, "manifest.json")
+	manifestData, err := json.MarshalIndent(manifest, "", "  ")
+	if err == nil {
+		if err := os.WriteFile(manifestPath, manifestData, 0644); err != nil {
+			progress(fmt.Sprintf("Warning: Failed to save manifest.json: %v", err))
+		}
+	} else {
+		progress(fmt.Sprintf("Warning: Failed to marshal manifest: %v", err))
+	}
+
 	progress("Split Process Complete.")
 	return smallDirs, nil
+}
+
+// ImageMetadata holds info for API upload
+type ImageMetadata struct {
+	ExcelColD string `json:"excel_col_d"`
+	FtpPath   string `json:"ftp_path,omitempty"`
+	Sort      int    `json:"sort"`
+	IsDef     int    `json:"is_def"`
+	ColorPicFilename string `json:"color_pic_filename,omitempty"`
 }
 
 // Helper functions

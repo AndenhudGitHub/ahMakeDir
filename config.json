@@ -1,8 +1,14 @@
 {
-    "WorkPath": "C:\\workspace\\ahMakeDir\\test",
+    "WorkPath": "C:\\goImgTest",
     "PictureDirName": "org",
     "SizeTablePath": "\\\\192.168.1.2\\Shopee\\★上架需求_商品照\u0026尺寸表\u0026上架資料表\\★尺寸表\\Sizelist_1000X1000",
+    "ColorPicPath": "\\\\192.168.1.2\\Shopee\\★上架需求_商品照\u0026尺寸表\u0026上架資料表\\★色塊",
     "width": "500",
     "height": "700",
-    "quality": 90
+    "quality": 90,
+    "ApiUrl": "http://admin.new.andenhud.local/savePicDataFromGo",
+    "FtpHost": "192.168.1.40",
+    "FtpPort": "21",
+    "FtpUser": "ah_img_dev",
+    "FtpPassword": "5; a83vu. "
 }

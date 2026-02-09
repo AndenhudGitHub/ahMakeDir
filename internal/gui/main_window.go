@@ -19,7 +19,7 @@ import (
 func RunApp() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("ahMakeDir - Image Processor")
-	myWindow.Resize(fyne.NewSize(800, 600))
+	myWindow.Resize(fyne.NewSize(1000, 900))
 
 	// Load Config
 	cfgPath := config.GetConfigPath()
@@ -41,6 +41,9 @@ func RunApp() {
 	sizeTablePathEntry := widget.NewEntry()
 	sizeTablePathEntry.SetText(cfg.SizeTablePath)
 
+	colorPicPathEntry := widget.NewEntry()
+	colorPicPathEntry.SetText(cfg.ColorPicPath)
+
 	widthEntry := widget.NewEntry()
 	widthEntry.SetText(cfg.Width)
 
@@ -50,13 +53,32 @@ func RunApp() {
 	qualityEntry := widget.NewEntry()
 	qualityEntry.SetText(fmt.Sprintf("%d", cfg.Quality))
 
+	// API & FTP Inputs
+	apiUrlEntry := widget.NewEntry()
+	apiUrlEntry.SetText(cfg.ApiUrl)
+	apiUrlEntry.SetPlaceHolder("http://...")
+
+	ftpHostEntry := widget.NewEntry()
+	ftpHostEntry.SetText(cfg.FtpHost)
+
+	ftpPortEntry := widget.NewEntry()
+	ftpPortEntry.SetText(cfg.FtpPort)
+
+	ftpUserEntry := widget.NewEntry()
+	ftpUserEntry.SetText(cfg.FtpUser)
+
+	ftpPassEntry := widget.NewPasswordEntry()
+	ftpPassEntry.SetText(cfg.FtpPassword)
+
+
+
 	// Log Area - using RichText for better text visibility
 	logText := widget.NewRichText()
 	logText.Wrapping = fyne.TextWrapWord
 
 	// Create a scroll container for the log
 	logScroll := container.NewScroll(logText)
-	logScroll.SetMinSize(fyne.NewSize(0, 400)) // Set minimum height
+	logScroll.SetMinSize(fyne.NewSize(0, 500)) // Increased minimum height
 
 	logFunc := func(msg string) {
 		// Use fyne.Do to ensure this runs on the main thread
@@ -82,9 +104,17 @@ func RunApp() {
 		cfg.WorkPath = workPathEntry.Text
 		cfg.PictureDirName = picDirEntry.Text
 		cfg.SizeTablePath = sizeTablePathEntry.Text
+		cfg.ColorPicPath = colorPicPathEntry.Text
 		cfg.Width = widthEntry.Text
 		cfg.Height = heightEntry.Text
 		fmt.Sscanf(qualityEntry.Text, "%d", &cfg.Quality)
+		
+		cfg.ApiUrl = apiUrlEntry.Text
+		cfg.FtpHost = ftpHostEntry.Text
+		cfg.FtpPort = ftpPortEntry.Text
+		cfg.FtpUser = ftpUserEntry.Text
+		cfg.FtpPassword = ftpPassEntry.Text
+
 
 		if err := config.Save(cfgPath, cfg); err != nil {
 			dialog.ShowError(err, myWindow)
@@ -101,6 +131,7 @@ func RunApp() {
 		cfg.WorkPath = workPathEntry.Text
 		cfg.PictureDirName = picDirEntry.Text
 		cfg.SizeTablePath = sizeTablePathEntry.Text
+		cfg.ColorPicPath = colorPicPathEntry.Text
 
 		go func() {
 			var err error
@@ -146,6 +177,32 @@ func RunApp() {
 		}()
 	})
 
+	runUploadBtn := widget.NewButton("3. Run Upload", func() {
+		logFunc("--- Starting Upload ---")
+		// Update config from UI
+		cfg.ApiUrl = apiUrlEntry.Text
+		cfg.FtpHost = ftpHostEntry.Text
+		cfg.FtpPort = ftpPortEntry.Text
+		cfg.FtpUser = ftpUserEntry.Text
+		cfg.FtpPassword = ftpPassEntry.Text
+
+
+		go func() {
+			err := logic.RunUpload(cfg, func(msg string) {
+				logFunc(msg)
+			})
+			if err != nil {
+				dialog.ShowError(err, myWindow)
+				logFunc(fmt.Sprintf("Error: %v", err))
+			} else {
+				fyne.Do(func() {
+					dialog.ShowInformation("Done", "Upload & API Call Completed!", myWindow)
+				})
+				logFunc("--- Upload Completed ---")
+			}
+		}()
+	})
+
 	runAllBtn := widget.NewButton("Run ALL", func() {
 		logFunc("--- Running ALL ---")
 		runSplitBtn.OnTapped()
@@ -157,19 +214,30 @@ func RunApp() {
 		widget.NewLabel("Work Path:"), workPathEntry,
 		widget.NewLabel("Picture Dir Name:"), picDirEntry,
 		widget.NewLabel("Size Table Path:"), sizeTablePathEntry,
+		widget.NewLabel("Color Pic Path:"), colorPicPathEntry,
 		widget.NewLabel("Resize Width:"), widthEntry,
 		widget.NewLabel("Resize Height:"), heightEntry,
 		widget.NewLabel("Quality (0-100):"), qualityEntry,
+		widget.NewLabel("Laravel API URL:"), apiUrlEntry,
+		widget.NewLabel("FTP Host:"), ftpHostEntry,
+		widget.NewLabel("FTP Port:"), ftpPortEntry,
+		widget.NewLabel("FTP User:"), ftpUserEntry,
+		widget.NewLabel("FTP Password:"), ftpPassEntry,
+
 	)
 
-	actions := container.NewHBox(saveBtn, layout.NewSpacer(), runSplitBtn, runCompressBtn, runAllBtn)
+	// Scrollable container for Form if it gets too long
+	formScroll := container.NewVScroll(form)
+	formScroll.SetMinSize(fyne.NewSize(0, 250)) // Ensure visible height
 
-	topContainer := container.NewVBox(widget.NewLabel("Configuration"), form, actions)
+	actions := container.NewHBox(saveBtn, layout.NewSpacer(), runSplitBtn, runCompressBtn, runUploadBtn, runAllBtn)
+
+	topContainer := container.NewVBox(widget.NewLabel("Configuration"), formScroll, actions)
 	bottomContainer := container.NewVBox(widget.NewLabel("Logs"), logScroll)
 
 	// Use VSplit for resizable log area
 	split := container.NewVSplit(topContainer, bottomContainer)
-	split.SetOffset(0.4) // Give 40% space to config, rest to logs
+	split.SetOffset(0.35) // Give 35% space to config, rest to logs
 
 	myWindow.SetContent(split)
 	myWindow.ShowAndRun()
