@@ -199,13 +199,42 @@ func RunUpload(cfg config.Config, log func(string)) error {
 			
 			var apiResp ApiResponse
 			if jsonErr := json.Unmarshal([]byte(respBody), &apiResp); jsonErr == nil {
-				// Handle Not Found Warnings
+				// Handle Not Found Warnings & Cleanup FTP
 				if len(apiResp.NotFoundSNs) > 0 {
 					log("---------------------------------------------------")
-					log("-----------------以下料號上傳失敗-----------------------")
-					log(fmt.Sprintf("WARNING: %d Items Not Found in Database:", len(apiResp.NotFoundSNs)))
+					log(fmt.Sprintf("WARNING: %d Items Not Found in Database. Cleaning up FTP...", len(apiResp.NotFoundSNs)))
+					
+					// Create map for SN lookup
+					missingSNs := make(map[string]bool)
 					for _, sn := range apiResp.NotFoundSNs {
-						log(fmt.Sprintf(" - %s", sn))
+						missingSNs[sn] = true
+						log(fmt.Sprintf(" - %s (Not found, deleting from FTP)", sn))
+					}
+
+					deletedCount := 0
+					deletedPaths := make(map[string]bool)
+
+					for _, item := range apiPayload {
+						if missingSNs[item.ExcelColD] {
+							// 1. Delete main image
+							if item.FtpPath != "" && !deletedPaths[item.FtpPath] {
+								ftpPath := strings.TrimPrefix(item.FtpPath, "/image/")
+								if err := c.Delete(ftpPath); err == nil {
+									deletedCount++
+								}
+								deletedPaths[item.FtpPath] = true
+							}
+
+							// 2. Delete color pic
+							if item.ColorPic != "" && !deletedPaths[item.ColorPic] {
+								ftpColorPath := strings.TrimPrefix(item.ColorPic, "/image/")
+								c.Delete(ftpColorPath) // Delete silently
+								deletedPaths[item.ColorPic] = true
+							}
+						}
+					}
+					if deletedCount > 0 {
+						log(fmt.Sprintf("Successfully removed %d invalid images from FTP.", deletedCount))
 					}
 					log("---------------------------------------------------")
 				}
