@@ -16,6 +16,7 @@ type Config struct {
 	Height         string `json:"height"` // Keeping as string to match original JSON
 	Quality        int    `json:"quality"`
 	ApiUrl         string `json:"ApiUrl"`
+	ApiKey         string `json:"ApiKey"`
 	FtpHost        string `json:"FtpHost"`
 	FtpPort        string `json:"FtpPort"`
 	FtpUser        string `json:"FtpUser"`

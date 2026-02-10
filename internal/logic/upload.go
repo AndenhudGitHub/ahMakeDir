@@ -183,7 +183,7 @@ func RunUpload(cfg config.Config, log func(string)) error {
 			SuccessGoodsColorIDs    []int    `json:"success_goods_color_ids"`
 		}
 
-		respBody, err := callLaravelAPI(cfg.ApiUrl, apiPayload)
+		respBody, err := callLaravelAPI(cfg.ApiUrl, cfg.ApiKey, apiPayload)
 		if err != nil {
 			// Try to parse error message from JSON body
 			var apiErrResp ApiResponse
@@ -277,7 +277,7 @@ func RunUpload(cfg config.Config, log func(string)) error {
 
 
 
-func callLaravelAPI(url string, payload interface{}) (string, error) {
+func callLaravelAPI(url, apiKey string, payload interface{}) (string, error) { // Updated signature
 	jsonBytes, err := json.Marshal(payload)
 	if err != nil {
 		return "", err
@@ -289,7 +289,10 @@ func callLaravelAPI(url string, payload interface{}) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("key", "salesAh29078955") // Auth key requested by user
+	
+	if apiKey != "" {
+		req.Header.Set("key", apiKey)
+	}
 
 	client := &http.Client{Timeout: 30 * time.Second} // Increased timeout for dd() which might be slow or large
 	resp, err := client.Do(req)

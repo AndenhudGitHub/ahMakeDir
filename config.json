@@ -7,8 +7,9 @@
     "height": "700",
     "quality": 90,
     "ApiUrl": "http://newsite.andenhud.com.tw/savePicDataFromGo",
+    "ApiKey": "",
     "FtpHost": "192.168.1.40",
     "FtpPort": "21",
     "FtpUser": "ah_img_dev",
-    "FtpPassword": "5; a83vu. "
+    "FtpPassword": ""
 }

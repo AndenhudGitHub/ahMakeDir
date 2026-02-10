@@ -58,6 +58,10 @@ func RunApp() {
 	apiUrlEntry.SetText(cfg.ApiUrl)
 	apiUrlEntry.SetPlaceHolder("http://...")
 
+	apiKeyEntry := widget.NewPasswordEntry()
+	apiKeyEntry.SetText(cfg.ApiKey)
+	apiKeyEntry.SetPlaceHolder("API Auth Key")
+
 	ftpHostEntry := widget.NewEntry()
 	ftpHostEntry.SetText(cfg.FtpHost)
 
@@ -110,6 +114,7 @@ func RunApp() {
 		fmt.Sscanf(qualityEntry.Text, "%d", &cfg.Quality)
 		
 		cfg.ApiUrl = apiUrlEntry.Text
+		cfg.ApiKey = apiKeyEntry.Text
 		cfg.FtpHost = ftpHostEntry.Text
 		cfg.FtpPort = ftpPortEntry.Text
 		cfg.FtpUser = ftpUserEntry.Text
@@ -181,6 +186,7 @@ func RunApp() {
 		logFunc("--- Starting Upload ---")
 		// Update config from UI
 		cfg.ApiUrl = apiUrlEntry.Text
+		cfg.ApiKey = apiKeyEntry.Text
 		cfg.FtpHost = ftpHostEntry.Text
 		cfg.FtpPort = ftpPortEntry.Text
 		cfg.FtpUser = ftpUserEntry.Text
@@ -219,6 +225,7 @@ func RunApp() {
 		widget.NewLabel("Resize Height:"), heightEntry,
 		widget.NewLabel("Quality (0-100):"), qualityEntry,
 		widget.NewLabel("Laravel API URL:"), apiUrlEntry,
+		widget.NewLabel("API Auth Key:"), apiKeyEntry,
 		widget.NewLabel("FTP Host:"), ftpHostEntry,
 		widget.NewLabel("FTP Port:"), ftpPortEntry,
 		widget.NewLabel("FTP User:"), ftpUserEntry,
