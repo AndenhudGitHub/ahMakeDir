@@ -138,6 +138,7 @@ func RunSplit(cfg config.Config, progress func(string)) ([]string, error) {
 
 		// Copy Images
 		count := 1
+		extraCount := 1
 		for i := begin; i <= end && i < len(imagePicArr); i++ {
 			originalName := imagePicArr[i]
 			srcImg := filepath.Join(imagePath, originalName)
@@ -235,6 +236,29 @@ func RunSplit(cfg config.Config, progress func(string)) ([]string, error) {
 				Sort:             count,
 				IsDef:            isDef,
 				ColorPicFilename: colorPicName,
+			}
+
+			// Duplicate image if IsDef is 1 or 2 (User Request)
+			if isDef == 1 || isDef == 2 {
+				ext := filepath.Ext(newFilename)
+				base := strings.TrimSuffix(newFilename, ext)
+				dupFilename := fmt.Sprintf("%s_01%s", base, ext)
+				
+				// Copy to SMALL (level4)
+				dupDest := filepath.Join(level4, dupFilename)
+				copyFile(srcImg, dupDest)
+
+				// Calculate sort for duplicate
+				dupSort := step + extraCount
+				extraCount++
+
+				// Add to manifest with IsDef = 0
+				manifest[dupFilename] = ImageMetadata{
+					ExcelColD:        row[3],
+					Sort:             dupSort,
+					IsDef:            0,
+					ColorPicFilename: colorPicName,
+				}
 			}
 
 			count++

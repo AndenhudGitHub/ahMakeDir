@@ -203,7 +203,8 @@ func RunUpload(cfg config.Config, log func(string)) error {
 				if len(apiResp.NotFoundSNs) > 0 {
 					log("---------------------------------------------------")
 					log(fmt.Sprintf("WARNING: %d Items Not Found in Database. Cleaning up FTP...", len(apiResp.NotFoundSNs)))
-					
+					log("-------------以下料號上傳失敗-----------------")
+
 					// Create map for SN lookup
 					missingSNs := make(map[string]bool)
 					for _, sn := range apiResp.NotFoundSNs {
